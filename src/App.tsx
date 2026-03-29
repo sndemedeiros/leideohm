@@ -549,7 +549,7 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGeneratePDF = async () => {
-    const reportElement = document.getElementById('printable-report');
+    const reportElement = reportRef.current;
     if (!reportElement) {
       alert("Erro: Relatório não encontrado.");
       return;
@@ -1246,215 +1246,6 @@ export default function App() {
       </main>
 
       {/* Report for Printing/Viewing */}
-      <div id="printable-report" className="hidden print:block bg-white text-black font-serif w-full max-w-[210mm] mx-auto">
-        <div className="p-12 space-y-12">
-          {/* 1. CAPA */}
-          <div className="text-center flex flex-col justify-between py-12 px-10 border-[10px] border-double border-slate-200">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold uppercase tracking-widest">{experimentInfo.university}</h1>
-              <h2 className="text-xl font-medium">{experimentInfo.center}</h2>
-              <h2 className="text-xl font-medium">{experimentInfo.department}</h2>
-            </div>
-            
-            <div className="flex flex-col items-center gap-8 my-12">
-              <div className="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center text-white">
-                <Zap size={48} />
-              </div>
-              <div className="space-y-4">
-                <p className="text-sm font-bold uppercase tracking-[0.3em] text-slate-500">Relatório Experimental</p>
-                <h3 className="text-4xl font-black uppercase tracking-tight leading-none">{experimentInfo.experiment}</h3>
-              </div>
-            </div>
-            
-            <div className="text-left max-w-xl mx-auto space-y-8">
-              <div className="space-y-4">
-                <p className="font-bold uppercase tracking-widest text-xs text-slate-400 border-b pb-2">Equipe de Trabalho</p>
-                <ul className="space-y-3">
-                  {groupMembers.map((m, i) => (
-                    <li key={i} className="text-xl font-medium flex items-center gap-3">
-                      <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      {m || "________________________________________"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-12 pt-6 border-t border-slate-100">
-                <div>
-                  <p className="font-bold uppercase tracking-widest text-[10px] text-slate-400 mb-2">Orientador(a)</p>
-                  <p className="text-lg font-bold text-slate-800">{experimentInfo.teacher || "____________________"}</p>
-                </div>
-                <div>
-                  <p className="font-bold uppercase tracking-widest text-[10px] text-slate-400 mb-2">Turma / Período</p>
-                  <p className="text-lg font-bold text-slate-800">{experimentInfo.classGroup || "____________________"}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-12">
-              <p className="text-lg font-bold tracking-widest uppercase">Natal - RN</p>
-              <p className="text-slate-500 font-medium">{experimentInfo.date}</p>
-            </div>
-          </div>
-
-          {/* CONTEÚDO */}
-          <div className="space-y-12 text-justify leading-relaxed">
-            <section>
-              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">Resumo</h2>
-              <p className="italic text-slate-700">
-                Este relatório apresenta os resultados obtidos no experimento de caracterização de elementos ôhmicos. Através da montagem de circuitos em série e medições sistemáticas de corrente e tensão, foram construídas as curvas características para dois resistores de valores nominais distintos (560 Ω e 10 kΩ). A análise dos dados permitiu verificar a linearidade da relação V = RI, confirmando a natureza ôhmica dos componentes.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">1. Objetivos</h2>
-              <ul className="list-disc ml-10 space-y-2">
-                <li>Construir as curvas características de corrente (I) vs voltagem (V).</li>
-                <li>Verificar a validade da Lei de Ohm.</li>
-                <li>Determinar experimentalmente os valores de resistência.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">2. Fundamentação Teórica</h2>
-              <p>A Lei de Ohm estabelece a proporcionalidade entre tensão e corrente:</p>
-              <div className="text-center my-8 text-2xl font-mono p-6 bg-slate-50 border border-slate-200">V = R · I</div>
-            </section>
-          </div>
-
-          {/* DADOS */}
-          <div className="space-y-12 text-justify leading-relaxed">
-            <section>
-              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">3. Dados Coletados</h2>
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <h3 className="font-bold mb-4 text-center">Resistor 560 Ω</h3>
-                  <table className="w-full border-collapse border border-black text-center">
-                    <thead>
-                      <tr className="bg-slate-50">
-                        <th className="border border-black p-2">V (V)</th>
-                        <th className="border border-black p-2">I (A)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data560.map((d, i) => (
-                        <tr key={i}>
-                          <td className="border border-black p-2">{d.v || "---"}</td>
-                          <td className="border border-black p-2">{d.i || "---"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div>
-                  <h3 className="font-bold mb-4 text-center">Resistor 10 kΩ</h3>
-                  <table className="w-full border-collapse border border-black text-center">
-                    <thead>
-                      <tr className="bg-slate-50">
-                        <th className="border border-black p-2">V (V)</th>
-                        <th className="border border-black p-2">I (A)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data10k.map((d, i) => (
-                        <tr key={i}>
-                          <td className="border border-black p-2">{d.v || "---"}</td>
-                          <td className="border border-black p-2">{d.i || "---"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* GRÁFICOS */}
-          <div className="space-y-12 text-justify leading-relaxed">
-            <section>
-              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">4. Gráficos</h2>
-              <div className="space-y-12">
-                <div className="flex flex-col items-center">
-                  <div className="border border-slate-200 p-4">
-                    <InteractiveLabGraph 
-                      title="Gráfico 1: I vs V (560 Ω)" 
-                      data={data560} 
-                      color="#2563eb" 
-                      maxI={0.025}
-                      elements={graphElements560}
-                      setElements={() => {}}
-                      history={[]}
-                      setHistory={() => {}}
-                      isReadOnly={true}
-                    />
-                  </div>
-                  <p className="mt-2 italic text-sm">Gráfico 1 - Curva característica (560 Ω).</p>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="border border-slate-200 p-4">
-                    <InteractiveLabGraph 
-                      title="Gráfico 2: I vs V (10 kΩ)" 
-                      data={data10k} 
-                      color="#10b981" 
-                      maxI={0.002}
-                      elements={graphElements10k}
-                      setElements={() => {}}
-                      history={[]}
-                      setHistory={() => {}}
-                      isReadOnly={true}
-                    />
-                  </div>
-                  <p className="mt-2 italic text-sm">Gráfico 2 - Curva característica (10 kΩ).</p>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* RESULTADOS */}
-          <div className="space-y-12 text-justify leading-relaxed">
-            <section>
-              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">5. Resultados e Discussão</h2>
-              <table className="w-full border-collapse border border-black text-center mb-12">
-                <thead>
-                  <tr className="bg-slate-50">
-                    <th className="border border-black p-2">Resistor</th>
-                    <th className="border border-black p-2">R Calc (Ω)</th>
-                    <th className="border border-black p-2">Erro (%)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="border border-black p-2 font-bold">560 Ω</td>
-                    <td className="border border-black p-2">{calculationResults.r560.calculatedR || "---"}</td>
-                    <td className="border border-black p-2">{calculationResults.r560.error || "---"}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-2 font-bold">10 kΩ</td>
-                    <td className="border border-black p-2">{calculationResults.r10k.calculatedR || "---"}</td>
-                    <td className="border border-black p-2">{calculationResults.r10k.error || "---"}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div className="space-y-8">
-                {answers.map((ans, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <p className="font-bold">Discussão {idx + 1}:</p>
-                    <div className="p-4 bg-slate-50 border border-slate-200 min-h-[100px]">
-                      {ans || "Sem resposta."}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <div className="mt-20 pt-10 border-t border-black text-center">
-              <p className="italic text-sm">Fim do Relatório Experimental</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Hidden Report for Image Capture (html2canvas fallback) */}
       <div data-report-container style={{ position: 'fixed', left: '-10000px', top: '0', zIndex: -100, visibility: 'hidden' }}>
         <div ref={reportRef} className="p-10 bg-white text-black font-serif w-[210mm] min-h-screen">
@@ -1579,20 +1370,20 @@ export default function App() {
             <div className="grid grid-cols-2 gap-12">
               <div>
                 <h3 className="font-bold mb-4 text-center">Tabela 1: Resistor 560 Ω</h3>
-                <table className="w-full border-collapse border border-black">
+                <table className="w-full border-collapse border border-black text-sm">
                   <thead>
-                    <tr>
-                      <th className="w-16">Ponto</th>
-                      <th>Tensão (V)</th>
-                      <th>Corrente (A)</th>
+                    <tr className="bg-slate-50">
+                      <th className="border border-black p-1 w-12">Ponto</th>
+                      <th className="border border-black p-1">Tensão (V)</th>
+                      <th className="border border-black p-1">Corrente (A)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data560.map((d, i) => (
                       <tr key={i}>
-                        <td>{i + 1}</td>
-                        <td>{d.v || "---"}</td>
-                        <td>{d.i || "---"}</td>
+                        <td className="border border-black p-1">{i + 1}</td>
+                        <td className="border border-black p-1">{d.v || "---"}</td>
+                        <td className="border border-black p-1">{d.i || "---"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1600,20 +1391,20 @@ export default function App() {
               </div>
               <div>
                 <h3 className="font-bold mb-4 text-center">Tabela 2: Resistor 10 kΩ</h3>
-                <table className="w-full border-collapse border border-black">
+                <table className="w-full border-collapse border border-black text-sm">
                   <thead>
-                    <tr>
-                      <th className="w-16">Ponto</th>
-                      <th>Tensão (V)</th>
-                      <th>Corrente (A)</th>
+                    <tr className="bg-slate-50">
+                      <th className="border border-black p-1 w-12">Ponto</th>
+                      <th className="border border-black p-1">Tensão (V)</th>
+                      <th className="border border-black p-1">Corrente (A)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data10k.map((d, i) => (
                       <tr key={i}>
-                        <td>{i + 1}</td>
-                        <td>{d.v || "---"}</td>
-                        <td>{d.i || "---"}</td>
+                        <td className="border border-black p-1">{i + 1}</td>
+                        <td className="border border-black p-1">{d.v || "---"}</td>
+                        <td className="border border-black p-1">{d.i || "---"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1670,33 +1461,33 @@ export default function App() {
             
             <p className="mb-6 text-justify">Abaixo estão consolidados os valores extraídos dos gráficos e as comparações com os valores de referência:</p>
             
-            <table className="w-full border-collapse border border-black mb-12">
+            <table className="w-full border-collapse border border-black mb-12 text-sm">
               <thead>
-                <tr>
-                  <th>Resistor</th>
-                  <th>Inclinação (A/V)</th>
-                  <th>R Calc (Ω)</th>
-                  <th>R Med (Ω)</th>
-                  <th>Erro (%)</th>
-                  <th>Potência (W)</th>
+                <tr className="bg-slate-50">
+                  <th className="border border-black p-2">Resistor</th>
+                  <th className="border border-black p-2">Inclinação (A/V)</th>
+                  <th className="border border-black p-2">R Calc (Ω)</th>
+                  <th className="border border-black p-2">R Med (Ω)</th>
+                  <th className="border border-black p-2">Erro (%)</th>
+                  <th className="border border-black p-2">Potência (W)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="font-bold">560 Ω</td>
-                  <td>{calculationResults.r560.slope || "---"}</td>
-                  <td>{calculationResults.r560.calculatedR || "---"}</td>
-                  <td>{calculationResults.r560.measuredR || "---"}</td>
-                  <td>{calculationResults.r560.error || "---"}</td>
-                  <td>{calculationResults.r560.power || "---"}</td>
+                  <td className="border border-black p-2 font-bold">560 Ω</td>
+                  <td className="border border-black p-2">{calculationResults.r560.slope || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r560.calculatedR || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r560.measuredR || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r560.error || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r560.power || "---"}</td>
                 </tr>
                 <tr>
-                  <td className="font-bold">10 kΩ</td>
-                  <td>{calculationResults.r10k.slope || "---"}</td>
-                  <td>{calculationResults.r10k.calculatedR || "---"}</td>
-                  <td>{calculationResults.r10k.measuredR || "---"}</td>
-                  <td>{calculationResults.r10k.error || "---"}</td>
-                  <td>{calculationResults.r10k.power || "---"}</td>
+                  <td className="border border-black p-2 font-bold">10 kΩ</td>
+                  <td className="border border-black p-2">{calculationResults.r10k.slope || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r10k.calculatedR || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r10k.measuredR || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r10k.error || "---"}</td>
+                  <td className="border border-black p-2">{calculationResults.r10k.power || "---"}</td>
                 </tr>
               </tbody>
             </table>
@@ -1704,20 +1495,20 @@ export default function App() {
 
           {/* 9. DISCUSSÃO E CONCLUSÃO */}
           <div data-pdf-section data-pdf-section-id="10" className="mb-16 px-10">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">8. Discussão das Perguntas</h2>
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">8. Perguntas e Discussão</h2>
             <div className="space-y-12">
               {[
                 {
-                  q: "Discussão 1",
+                  q: "Pergunta 1",
                   text: "Com base nos gráficos obtidos, a relação entre a tensão (V) e a corrente (I) é linear para ambos os resistores? O que isso indica sobre a natureza desses componentes em relação à Lei de Ohm?"
                 },
                 {
-                  q: "Discussão 2",
+                  q: "Pergunta 2",
                   text: "Compare os valores de resistência medidos com o multímetro com os valores nominais (560 Ω e 10 kΩ) e com os valores calculados a partir da inclinação da reta. Quais são as possíveis fontes de erro experimental que podem ter influenciado essas diferenças?"
                 }
               ].map((item, idx) => (
                 <div key={idx} className="space-y-4">
-                  <p className="font-bold text-slate-800">8.{idx + 1}. {item.text}</p>
+                  <p className="font-bold text-slate-800">{idx + 1}. {item.text}</p>
                   <div className="p-6 bg-slate-50 border-l-4 border-slate-300 text-justify leading-relaxed text-slate-800 min-h-[100px]">
                     {answers[idx] || "Nenhuma resposta fornecida."}
                   </div>
