@@ -181,20 +181,20 @@ const InteractiveLabGraph = ({
     // Labels V
     for (let v = 0; v <= MAX_V; v++) {
       const x = PADDING + (v / MAX_V) * (WIDTH - 2 * PADDING);
-      ctx.fillStyle = '#64748b';
-      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 14px Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(v.toString(), x, HEIGHT - PADDING + 15);
+      ctx.fillText(v.toString(), x, HEIGHT - PADDING + 20);
     }
 
     // Labels I
     for (let i = 0; i <= 5; i++) {
       const val = (i / 5) * MAX_I;
       const y = HEIGHT - PADDING - (i / 5) * (HEIGHT - 2 * PADDING);
-      ctx.fillStyle = '#64748b';
-      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 14px Arial, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(val.toFixed(4), PADDING - 5, y + 3);
+      ctx.fillText(val.toFixed(4), PADDING - 8, y + 4);
     }
 
     // Draw Axes
@@ -208,7 +208,7 @@ const InteractiveLabGraph = ({
 
     // Axis Labels
     ctx.fillStyle = '#1e293b';
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = 'bold 13px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('V (V)', WIDTH / 2, HEIGHT - 5);
     ctx.save();
@@ -536,8 +536,6 @@ export default function App() {
     setGroupMembers(newMembers);
   };
 
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const formatComma = (val: any) => {
     if (val === null || val === undefined || val === '') return '';
     if (typeof val === 'number') {
@@ -546,107 +544,92 @@ export default function App() {
     return val.toString().replace('.', ',');
   };
 
-  const generatePDF = async () => {
-    if (!reportRef.current) {
-      console.error("Report ref not found");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGeneratePDF = async () => {
+    const reportElement = document.getElementById('printable-report');
+    if (!reportElement) {
+      alert("Erro: Relatório não encontrado.");
       return;
     }
-    setIsGenerating(true);
-    console.log("Starting PDF generation...");
-    
-    try {
-      // Small delay to ensure any pending renders are finished
-      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const reportContainer = document.querySelector('[data-report-container]') as HTMLElement;
-      if (reportContainer) {
-        reportContainer.style.position = 'fixed';
-        reportContainer.style.left = '0';
-        reportContainer.style.top = '0';
-        reportContainer.style.zIndex = '9999';
-        reportContainer.style.visibility = 'visible';
-        reportContainer.style.display = 'block';
-      }
+    setIsGenerating(true);
+
+    try {
+      // Create a temporary container for rendering
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-10000px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '210mm'; // A4 width
+      tempContainer.style.backgroundColor = 'white';
+      document.body.appendChild(tempContainer);
+
+      // Clone the report
+      const clone = reportElement.cloneNode(true) as HTMLElement;
+      clone.classList.remove('hidden', 'print:block');
+      clone.style.display = 'block';
+      tempContainer.appendChild(clone);
+
+      // Handle canvases: replace them with images in the clone
+      const originalCanvases = reportElement.querySelectorAll('canvas');
+      const clonedCanvases = clone.querySelectorAll('canvas');
+      
+      originalCanvases.forEach((canvas, idx) => {
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.style.width = '100%';
+        img.style.maxWidth = '600px';
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '0 auto';
+        
+        const clonedCanvas = clonedCanvases[idx];
+        if (clonedCanvas && clonedCanvas.parentNode) {
+          clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+        }
+      });
 
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15; // 15mm margin
+      const margin = 15;
       const contentWidth = pdfWidth - (2 * margin);
-      const maxPageHeight = pdfHeight - margin; // Bottom limit
-      let currentY = margin;
 
-      const sections = reportRef.current.querySelectorAll('[data-pdf-section]');
-      console.log(`Found ${sections.length} sections to capture`);
-
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i] as HTMLElement;
-        console.log(`Capturing section ${i + 1}...`);
+      const pages = clone.querySelectorAll('[data-pdf-page]');
+      
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
         
-        // Small delay before each section to ensure layout and canvas rendering are stable
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        const canvas = await html2canvas(section, {
+        const canvas = await html2canvas(page, {
           scale: 2,
           useCORS: true,
-          allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
-          windowWidth: 1200,
-          scrollY: 0,
-          scrollX: 0,
-          onclone: (clonedDoc) => {
-            const clonedSection = clonedDoc.querySelector(`[data-pdf-section-id="${i}"]`) as HTMLElement;
-            if (clonedSection) {
-              clonedSection.style.overflow = 'visible';
-              clonedSection.style.height = 'auto';
-              clonedSection.style.display = 'block';
-              
-              // Add a physical spacer at the end of the cloned section
-              const spacer = clonedDoc.createElement('div');
-              spacer.style.height = '100px';
-              spacer.style.width = '100%';
-              spacer.style.backgroundColor = 'white';
-              clonedSection.appendChild(spacer);
-            }
-          }
+          windowWidth: 1200
         });
-        
-        // Use JPEG with 0.7 quality to keep file size well under 10MB
-        const imgData = canvas.toDataURL('image/jpeg', 0.7);
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.9);
         const imgProps = pdf.getImageProperties(imgData);
-        
-        // Calculate height based on the canvas aspect ratio
         const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+
+        if (i > 0) pdf.addPage();
         
-        // Safety check for page breaks
-        // If it's not the first section and it doesn't fit, or if it's a very tall section that needs its own page
-        if (i > 0 && (currentY + imgHeight > maxPageHeight)) {
-          pdf.addPage();
-          currentY = margin;
+        // Center vertically if it's the cover page
+        let yPos = margin;
+        if (i === 0 && imgHeight < pdfHeight - 2 * margin) {
+          yPos = (pdfHeight - imgHeight) / 2;
         }
 
-        pdf.addImage(imgData, 'JPEG', margin, currentY, contentWidth, imgHeight);
-        
-        // Increment Y by the image height minus a portion of the added spacer to keep sections close
-        // The spacer was 100px, which at scale 2 is 200px. 
-        // We want to skip most of that extra white space in the PDF Y-coordinate.
-        currentY += (imgHeight * 0.85) + 5; 
+        pdf.addImage(imgData, 'JPEG', margin, yPos, contentWidth, imgHeight);
       }
 
-      if (reportContainer) {
-        reportContainer.style.position = 'fixed';
-        reportContainer.style.left = '-10000px';
-        reportContainer.style.zIndex = '-100';
-        reportContainer.style.visibility = 'hidden';
-        reportContainer.style.display = 'none';
-      }
-      
-      console.log("Saving PDF...");
       pdf.save(`Relatorio_${experimentInfo.experiment.replace(/\s+/g, '_')}.pdf`);
-      console.log("PDF saved successfully");
+      
+      document.body.removeChild(tempContainer);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
+      alert("Houve um erro ao gerar o PDF. Por favor, tente novamente.");
     } finally {
       setIsGenerating(false);
     }
@@ -745,9 +728,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 no-print">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between no-print">
         <div className="flex items-center gap-2">
           <button onClick={() => setView('cover')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
             <ChevronLeft size={20} />
@@ -766,7 +749,7 @@ export default function App() {
       </header>
 
       {/* Content Area */}
-      <main className="max-w-3xl mx-auto px-4 py-8 pb-32 space-y-16">
+      <main className="max-w-3xl mx-auto px-4 py-8 pb-32 space-y-16 no-print">
         {/* 1. CAPA (Hidden in main view, used for PDF) */}
         <div className="hidden">
           <section id="capa" className="scroll-mt-20">
@@ -1247,208 +1230,437 @@ export default function App() {
             </div>
 
             <div className="space-y-6">
-              <button 
-                onClick={generatePDF}
-                disabled={isGenerating}
-                className={`w-full flex items-center justify-center gap-3 py-6 rounded-2xl font-bold shadow-xl transition-all active:scale-95 ${
-                  isGenerating ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 text-white'
-                }`}
-              >
-                {isGenerating ? (
-                  <>Gerando PDF...</>
-                ) : (
-                  <>
-                    <FileText size={24} /> Gerar Relatório PDF
-                  </>
-                )}
-              </button>
-              <p className="text-xs text-slate-400 font-medium leading-relaxed px-4">
-                O arquivo PDF conterá todas as seções do roteiro, incluindo a capa, objetivos, materiais, fundamentação teórica, procedimento experimental, dados coletados, resultados dos cálculos e as respostas das perguntas.
+              <div className="flex flex-col gap-4">
+                <button 
+                  onClick={handleGeneratePDF}
+                  disabled={isGenerating}
+                  className={`w-full flex items-center justify-center gap-3 py-8 rounded-3xl font-black text-xl shadow-2xl transition-all active:scale-95 group ${
+                    isGenerating ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-black text-white'
+                  }`}
+                >
+                  {isGenerating ? (
+                    <>Processando PDF...</>
+                  ) : (
+                    <>
+                      <FileText size={32} className="group-hover:scale-110 transition-transform" /> 
+                      BAIXAR RELATÓRIO PDF
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-sm text-slate-500 font-medium leading-relaxed px-4 text-center">
+                O arquivo será gerado e o download iniciará automaticamente.
               </p>
             </div>
           </div>
         </section>
       </main>
 
-      {/* Hidden Report for PDF Generation - Using off-screen instead of display:none for html2canvas */}
-      <div data-report-container style={{ position: 'fixed', left: '-10000px', top: '0', zIndex: -100, visibility: 'hidden', display: 'none' }}>
-        <div ref={reportRef} className="p-10 bg-white text-black font-serif w-[210mm] min-h-screen">
+      {/* Report for Printing/Viewing */}
+      <div id="printable-report" className="hidden print:block bg-white text-black font-serif w-full max-w-[210mm] mx-auto">
+        <div className="p-12 space-y-12">
           {/* 1. CAPA */}
-          <div data-pdf-section className="text-center mb-20 min-h-[230mm] flex flex-col justify-between py-10">
-            <div>
-              <h1 className="text-2xl font-bold uppercase">{experimentInfo.university}</h1>
-              <h2 className="text-xl">{experimentInfo.center}</h2>
-              <h2 className="text-xl">{experimentInfo.department}</h2>
+          <div data-pdf-page className="text-center min-h-[260mm] flex flex-col justify-between py-12 px-10 border-[10px] border-double border-slate-200">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold uppercase tracking-widest">{experimentInfo.university}</h1>
+              <h2 className="text-xl font-medium">{experimentInfo.center}</h2>
+              <h2 className="text-xl font-medium">{experimentInfo.department}</h2>
             </div>
             
-            <div className="flex flex-col items-center gap-6">
-              <div className="bg-blue-600 p-4 rounded-3xl text-white inline-flex items-center justify-center shadow-xl shadow-blue-100">
-                <Zap size={48} strokeWidth={3} />
+            <div className="flex flex-col items-center gap-8 my-12">
+              <div className="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center text-white">
+                <Zap size={48} />
               </div>
-              <h3 className="text-3xl font-bold uppercase">{experimentInfo.experiment}</h3>
+              <div className="space-y-4">
+                <p className="text-sm font-bold uppercase tracking-[0.3em] text-slate-500">Relatório Experimental</p>
+                <h3 className="text-4xl font-black uppercase tracking-tight leading-none">{experimentInfo.experiment}</h3>
+              </div>
             </div>
             
-            <div className="text-left max-w-lg mx-auto border-t pt-10 space-y-6">
-              <div>
-                <p className="font-bold mb-4 uppercase tracking-widest text-sm">Componentes do Grupo:</p>
-                <ul className="list-disc ml-10 space-y-2">
-                  {groupMembers.map((m, i) => <li key={i} className="text-lg">{m || "____________________"}</li>)}
+            <div className="text-left max-w-xl mx-auto space-y-8">
+              <div className="space-y-4">
+                <p className="font-bold uppercase tracking-widest text-xs text-slate-400 border-b pb-2">Equipe de Trabalho</p>
+                <ul className="space-y-3">
+                  {groupMembers.map((m, i) => (
+                    <li key={i} className="text-xl font-medium flex items-center gap-3">
+                      <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                      {m || "________________________________________"}
+                    </li>
+                  ))}
                 </ul>
               </div>
               
-              <div className="grid grid-cols-2 gap-10 pt-4">
+              <div className="grid grid-cols-2 gap-12 pt-6 border-t border-slate-100">
                 <div>
-                  <p className="font-bold uppercase tracking-widest text-xs mb-1">Professor(a):</p>
-                  <p className="text-lg border-b border-slate-300 pb-1">{experimentInfo.teacher || "____________________"}</p>
+                  <p className="font-bold uppercase tracking-widest text-[10px] text-slate-400 mb-2">Orientador(a)</p>
+                  <p className="text-lg font-bold text-slate-800">{experimentInfo.teacher || "____________________"}</p>
                 </div>
                 <div>
-                  <p className="font-bold uppercase tracking-widest text-xs mb-1">Turma:</p>
-                  <p className="text-lg border-b border-slate-300 pb-1">{experimentInfo.classGroup || "____________________"}</p>
+                  <p className="font-bold uppercase tracking-widest text-[10px] text-slate-400 mb-2">Turma / Período</p>
+                  <p className="text-lg font-bold text-slate-800">{experimentInfo.classGroup || "____________________"}</p>
                 </div>
               </div>
             </div>
             
-            <p className="italic">Natal, {experimentInfo.date}</p>
+            <div className="mt-12">
+              <p className="text-lg font-bold tracking-widest uppercase">Natal - RN</p>
+              <p className="text-slate-500 font-medium">{experimentInfo.date}</p>
+            </div>
+          </div>
+
+          {/* CONTEÚDO - PAG 2 */}
+          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+            <section>
+              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">Resumo</h2>
+              <p className="italic text-slate-700">
+                Este relatório apresenta os resultados obtidos no experimento de caracterização de elementos ôhmicos. Através da montagem de circuitos em série e medições sistemáticas de corrente e tensão, foram construídas as curvas características para dois resistores de valores nominais distintos (560 Ω e 10 kΩ). A análise dos dados permitiu verificar a linearidade da relação V = RI, confirmando a natureza ôhmica dos componentes.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">1. Objetivos</h2>
+              <ul className="list-disc ml-10 space-y-2">
+                <li>Construir as curvas características de corrente (I) vs voltagem (V).</li>
+                <li>Verificar a validade da Lei de Ohm.</li>
+                <li>Determinar experimentalmente os valores de resistência.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">2. Fundamentação Teórica</h2>
+              <p>A Lei de Ohm estabelece a proporcionalidade entre tensão e corrente:</p>
+              <div className="text-center my-8 text-2xl font-mono p-6 bg-slate-50 border border-slate-200">V = R · I</div>
+            </section>
+          </div>
+
+          {/* DADOS - PAG 3 */}
+          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+            <section>
+              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">3. Dados Coletados</h2>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-bold mb-4 text-center">Resistor 560 Ω</h3>
+                  <table className="w-full border-collapse border border-black text-center">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        <th className="border border-black p-2">V (V)</th>
+                        <th className="border border-black p-2">I (A)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data560.map((d, i) => (
+                        <tr key={i}>
+                          <td className="border border-black p-2">{d.v || "---"}</td>
+                          <td className="border border-black p-2">{d.i || "---"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <h3 className="font-bold mb-4 text-center">Resistor 10 kΩ</h3>
+                  <table className="w-full border-collapse border border-black text-center">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        <th className="border border-black p-2">V (V)</th>
+                        <th className="border border-black p-2">I (A)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data10k.map((d, i) => (
+                        <tr key={i}>
+                          <td className="border border-black p-2">{d.v || "---"}</td>
+                          <td className="border border-black p-2">{d.i || "---"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* GRÁFICOS - PAG 4 */}
+          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+            <section>
+              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">4. Gráficos</h2>
+              <div className="space-y-12">
+                <div className="flex flex-col items-center">
+                  <div className="border border-slate-200 p-4">
+                    <InteractiveLabGraph 
+                      title="Gráfico 1: I vs V (560 Ω)" 
+                      data={data560} 
+                      color="#2563eb" 
+                      maxI={0.025}
+                      elements={graphElements560}
+                      setElements={() => {}}
+                      history={[]}
+                      setHistory={() => {}}
+                      isReadOnly={true}
+                    />
+                  </div>
+                  <p className="mt-2 italic text-sm">Gráfico 1 - Curva característica (560 Ω).</p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="border border-slate-200 p-4">
+                    <InteractiveLabGraph 
+                      title="Gráfico 2: I vs V (10 kΩ)" 
+                      data={data10k} 
+                      color="#10b981" 
+                      maxI={0.002}
+                      elements={graphElements10k}
+                      setElements={() => {}}
+                      history={[]}
+                      setHistory={() => {}}
+                      isReadOnly={true}
+                    />
+                  </div>
+                  <p className="mt-2 italic text-sm">Gráfico 2 - Curva característica (10 kΩ).</p>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* RESULTADOS - PAG 5 */}
+          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+            <section>
+              <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">5. Resultados e Discussão</h2>
+              <table className="w-full border-collapse border border-black text-center mb-12">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="border border-black p-2">Resistor</th>
+                    <th className="border border-black p-2">R Calc (Ω)</th>
+                    <th className="border border-black p-2">Erro (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-black p-2 font-bold">560 Ω</td>
+                    <td className="border border-black p-2">{calculationResults.r560.calculatedR || "---"}</td>
+                    <td className="border border-black p-2">{calculationResults.r560.error || "---"}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-2 font-bold">10 kΩ</td>
+                    <td className="border border-black p-2">{calculationResults.r10k.calculatedR || "---"}</td>
+                    <td className="border border-black p-2">{calculationResults.r10k.error || "---"}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="space-y-8">
+                {answers.map((ans, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <p className="font-bold">Discussão {idx + 1}:</p>
+                    <div className="p-4 bg-slate-50 border border-slate-200 min-h-[100px]">
+                      {ans || "Sem resposta."}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="mt-20 pt-10 border-t border-black text-center">
+              <p className="italic text-sm">Fim do Relatório Experimental</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hidden Report for Image Capture (html2canvas fallback) */}
+      <div data-report-container style={{ position: 'fixed', left: '-10000px', top: '0', zIndex: -100, visibility: 'hidden' }}>
+        <div ref={reportRef} className="p-10 bg-white text-black font-serif w-[210mm] min-h-screen">
+          {/* 1. CAPA */}
+          <div data-pdf-section data-pdf-section-id="0" className="text-center mb-20 min-h-[260mm] flex flex-col justify-between py-12 px-10 border-[10px] border-double border-slate-100">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold uppercase tracking-widest">{experimentInfo.university}</h1>
+              <h2 className="text-xl font-medium">{experimentInfo.center}</h2>
+              <h2 className="text-xl font-medium">{experimentInfo.department}</h2>
+            </div>
+            
+            <div className="flex flex-col items-center gap-8 my-12">
+              <div className="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-2xl">
+                <Zap size={48} />
+              </div>
+              <div className="space-y-4">
+                <p className="text-sm font-bold uppercase tracking-[0.3em] text-slate-500">Relatório Experimental</p>
+                <h3 className="text-4xl font-black uppercase tracking-tight leading-none max-w-2xl mx-auto">{experimentInfo.experiment}</h3>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-12 text-left max-w-xl mx-auto">
+              <div className="space-y-4">
+                <p className="font-bold uppercase tracking-widest text-xs text-slate-400 border-b pb-2">Equipe de Trabalho</p>
+                <ul className="space-y-3">
+                  {groupMembers.map((m, i) => (
+                    <li key={i} className="text-xl font-medium flex items-center gap-3">
+                      <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                      {m || "________________________________________"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-12 pt-6 border-t border-slate-100">
+                <div>
+                  <p className="font-bold uppercase tracking-widest text-[10px] text-slate-400 mb-2">Orientador(a)</p>
+                  <p className="text-lg font-bold text-slate-800">{experimentInfo.teacher || "____________________"}</p>
+                </div>
+                <div>
+                  <p className="font-bold uppercase tracking-widest text-[10px] text-slate-400 mb-2">Turma / Período</p>
+                  <p className="text-lg font-bold text-slate-800">{experimentInfo.classGroup || "____________________"}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-12">
+              <p className="text-lg font-bold tracking-widest uppercase">Natal - RN</p>
+              <p className="text-slate-500 font-medium">{experimentInfo.date}</p>
+            </div>
+          </div>
+
+          {/* RESUMO */}
+          <div data-pdf-section data-pdf-section-id="1" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">Resumo</h2>
+            <p className="text-justify leading-relaxed italic text-slate-700">
+              Este relatório apresenta os resultados obtidos no experimento de caracterização de elementos ôhmicos. Através da montagem de circuitos em série e medições sistemáticas de corrente e tensão, foram construídas as curvas características para dois resistores de valores nominais distintos (560 Ω e 10 kΩ). A análise dos dados permitiu verificar a linearidade da relação V = RI, confirmando a natureza ôhmica dos componentes e possibilitando o cálculo experimental das resistências através da inclinação das retas ajustadas. Os resultados foram comparados com os valores medidos via multímetro, discutindo-se as incertezas e erros inerentes ao processo experimental.
+            </p>
+            <p className="mt-4 font-bold text-sm">Palavras-chave: Lei de Ohm, Resistores, Curva Característica, Linearidade, Medidas Elétricas.</p>
           </div>
           
-          {/* 2. INTRODUÇÃO E OBJETIVOS */}
-          <div data-pdf-section data-pdf-section-id="1" className="mb-12 pb-16">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6">1. Objetivos</h2>
-            <ul className="list-disc ml-10 space-y-3">
-              <li>Construir as curvas características de corrente (I) vs voltagem (V) para diferentes resistores.</li>
-              <li>Classificar componentes elétricos como ôhmicos ou não-ôhmicos.</li>
-              <li>Verificar experimentalmente a validade da Lei de Ohm através da análise de inclinação de retas.</li>
+          {/* 2. OBJETIVOS */}
+          <div data-pdf-section data-pdf-section-id="2" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">1. Objetivos</h2>
+            <ul className="list-disc ml-10 space-y-4 text-justify">
+              <li><strong>Caracterização Elétrica:</strong> Construir as curvas características de corrente (I) vs voltagem (V) para diferentes resistores comerciais.</li>
+              <li><strong>Verificação da Lei de Ohm:</strong> Classificar componentes elétricos como ôhmicos ou não-ôhmicos com base na linearidade de suas respostas.</li>
+              <li><strong>Análise Quantitativa:</strong> Determinar experimentalmente os valores de resistência através da análise de regressão linear (inclinação da reta) e comparar com valores nominais e medidos.</li>
             </ul>
-            <div className="h-8" />
           </div>
 
           {/* 3. MATERIAL UTILIZADO */}
-          <div data-pdf-section data-pdf-section-id="2" className="mb-12 pb-16">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6">2. Material Utilizado</h2>
-            <ul className="list-disc ml-10 space-y-2">
-              <li>Fonte de alimentação DC variável (PHYWE).</li>
-              <li>Multímetro Digital (MINIPA) operando como Amperímetro e Voltímetro.</li>
-              <li>Resistores de 560 Ω e 10 kΩ.</li>
-              <li>Cabos de conexão e protoboard.</li>
-            </ul>
-            <div className="h-8" />
+          <div data-pdf-section data-pdf-section-id="3" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">2. Material Utilizado</h2>
+            <div className="grid grid-cols-2 gap-8">
+              <ul className="list-disc ml-10 space-y-2">
+                <li>Fonte de alimentação DC variável (0-12V).</li>
+                <li>Multímetro Digital (Amperímetro/Voltímetro).</li>
+                <li>Resistor de carvão (560 Ω).</li>
+              </ul>
+              <ul className="list-disc ml-10 space-y-2">
+                <li>Resistor de carvão (10 kΩ).</li>
+                <li>Protoboard (Matriz de contatos).</li>
+                <li>Cabos de conexão tipo banana/jacaré.</li>
+              </ul>
+            </div>
           </div>
 
           {/* 4. FUNDAMENTAÇÃO TEÓRICA */}
-          <div data-pdf-section data-pdf-section-id="3" className="mb-12 pb-16">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6">3. Fundamentação Teórica</h2>
-            <p className="mb-4 leading-relaxed">
-              A Lei de Ohm estabelece que a diferença de potencial (V) aplicada às extremidades de um condutor é diretamente proporcional à corrente elétrica (I) que o atravessa, sendo a resistência (R) a constante de proporcionalidade:
+          <div data-pdf-section data-pdf-section-id="4" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">3. Fundamentação Teórica</h2>
+            <p className="mb-6 text-justify leading-relaxed">
+              A Lei de Ohm, formulada por Georg Simon Ohm em 1827, é um dos pilares da eletrodinâmica. Ela estabelece que, para certos materiais (condutores ôhmicos), a diferença de potencial (V) aplicada é diretamente proporcional à intensidade da corrente elétrica (I) que circula pelo condutor:
             </p>
-            <div className="text-center my-6 font-mono text-2xl font-bold">V = R · I</div>
-            <p className="leading-relaxed">
-              Componentes que seguem esta relação linear são denominados ôhmicos. Em um gráfico I vs V, a inclinação da reta resultante corresponde à condutância (1/R).
+            <div className="formula-block">V = R · I</div>
+            <p className="leading-relaxed text-justify">
+              Onde <strong>R</strong> representa a resistência elétrica, medida em Ohms (Ω). Graficamente, a relação entre I e V para um condutor ôhmico é uma linha reta que passa pela origem. A inclinação desta reta (ΔI/ΔV) é numericamente igual à condutância (G = 1/R). Portanto, quanto maior a inclinação, menor a resistência do componente.
             </p>
-            <div className="h-8" />
           </div>
 
           {/* 5. PROCEDIMENTO EXPERIMENTAL */}
-          <div data-pdf-section data-pdf-section-id="4" className="mb-8 pb-16">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6">4. Procedimento Experimental</h2>
-            <div className="space-y-4">
-              <p>O experimento foi realizado seguindo as etapas abaixo:</p>
-              <ol className="list-decimal ml-10 space-y-3">
-                <li>Montagem do circuito em série com a fonte, o resistor e o amperímetro, com o voltímetro em paralelo ao resistor.</li>
-                <li>Ajuste da fonte de 1V em 1V, de 1V até 12V.</li>
-                <li>Registro simultâneo dos valores de corrente e tensão para cada incremento.</li>
-                <li>Repetição do processo para ambos os resistores fornecidos.</li>
+          <div data-pdf-section data-pdf-section-id="5" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">4. Procedimento Experimental</h2>
+            <div className="space-y-6">
+              <p className="text-justify">O procedimento seguiu uma metodologia rigorosa de coleta de dados ponto a ponto:</p>
+              <ol className="list-decimal ml-10 space-y-4 text-justify">
+                <li><strong>Montagem:</strong> Conexão do resistor em série com a fonte e o amperímetro. O voltímetro foi conectado em paralelo ao resistor para medir a queda de tensão real.</li>
+                <li><strong>Calibração:</strong> Verificação da voltagem zero e ajuste da corrente de proteção da fonte.</li>
+                <li><strong>Varredura:</strong> Incremento da tensão de 1,0V em 1,0V, partindo de 1,0V até atingir o limite de 12,0V.</li>
+                <li><strong>Registro:</strong> Anotação simultânea dos valores de V e I para cada passo, garantindo a estabilidade térmica do componente.</li>
               </ol>
+              <div className="flex justify-center gap-12 my-10">
+                <Figure1 />
+                <Figure2 />
+              </div>
             </div>
-            <div className="h-8" />
-          </div>
-
-          <div data-pdf-section data-pdf-section-id="5" className="mb-12 pb-16">
-            <div className="flex justify-center gap-10 my-10 scale-75 origin-center">
-              <Figure1 />
-              <Figure2 />
-            </div>
-            <div className="h-8" />
           </div>
 
           {/* 6. DADOS COLETADOS */}
-          <div data-pdf-section data-pdf-section-id="6" className="mb-8 pb-16">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6">5. Dados Coletados</h2>
-            <div className="grid grid-cols-2 gap-10">
+          <div data-pdf-section data-pdf-section-id="6" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">5. Dados Coletados</h2>
+            <div className="grid grid-cols-2 gap-12">
               <div>
-                <h3 className="font-bold mb-2">Resistor 560 Ω</h3>
-                <table className="w-full border-collapse border border-black text-sm">
+                <h3 className="font-bold mb-4 text-center">Tabela 1: Resistor 560 Ω</h3>
+                <table className="w-full border-collapse border border-black">
                   <thead>
                     <tr>
-                      <th className="border border-black p-1 w-12">#</th>
-                      <th className="border border-black p-1">V (V)</th>
-                      <th className="border border-black p-1">I (A)</th>
+                      <th className="w-16">Ponto</th>
+                      <th>Tensão (V)</th>
+                      <th>Corrente (A)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data560.map((d, i) => (
                       <tr key={i}>
-                        <td className="border border-black p-1 text-center">{i + 1}</td>
-                        <td className="border border-black p-1">{d.v}</td>
-                        <td className="border border-black p-1">{d.i}</td>
+                        <td>{i + 1}</td>
+                        <td>{d.v || "---"}</td>
+                        <td>{d.i || "---"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               <div>
-                <h3 className="font-bold mb-2">Resistor 10 kΩ</h3>
-                <table className="w-full border-collapse border border-black text-sm">
+                <h3 className="font-bold mb-4 text-center">Tabela 2: Resistor 10 kΩ</h3>
+                <table className="w-full border-collapse border border-black">
                   <thead>
                     <tr>
-                      <th className="border border-black p-1 w-12">#</th>
-                      <th className="border border-black p-1">V (V)</th>
-                      <th className="border border-black p-1">I (A)</th>
+                      <th className="w-16">Ponto</th>
+                      <th>Tensão (V)</th>
+                      <th>Corrente (A)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data10k.map((d, i) => (
                       <tr key={i}>
-                        <td className="border border-black p-1 text-center">{i + 1}</td>
-                        <td className="border border-black p-1">{d.v}</td>
-                        <td className="border border-black p-1">{d.i}</td>
+                        <td>{i + 1}</td>
+                        <td>{d.v || "---"}</td>
+                        <td>{d.i || "---"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-            <div className="h-8" />
           </div>
 
-          {/* 6. GRÁFICO E ANÁLISE */}
-          <div data-pdf-section data-pdf-section-id="7" className="mb-12 pb-16">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6">6. Gráfico e Análise</h2>
-            <p className="mb-4">Abaixo encontram-se os gráficos gerados a partir dos dados coletados:</p>
-            <div className="flex flex-col items-center gap-10">
-              <div className="border border-black p-4 bg-white scale-90 origin-top">
-                <h4 className="text-center font-bold mb-2">Gráfico I vs V - Resistor 560 Ω</h4>
-                <InteractiveLabGraph 
-                  title="Resistor 560 Ω" 
-                  data={data560} 
-                  color="#2563eb" 
-                  maxI={0.025}
-                  elements={graphElements560}
-                  setElements={() => {}}
-                  history={[]}
-                  setHistory={() => {}}
-                  isReadOnly={true}
-                />
+          {/* 7. GRÁFICOS */}
+          <div data-pdf-section data-pdf-section-id="7" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-10 uppercase tracking-widest">6. Gráficos e Análise Visual</h2>
+            <div className="space-y-20">
+              <div className="flex flex-col items-center">
+                <div className="border-2 border-slate-100 p-6 bg-white shadow-sm">
+                  <InteractiveLabGraph 
+                    title="Gráfico 1: I vs V (560 Ω)" 
+                    data={data560} 
+                    color="#2563eb" 
+                    maxI={0.025}
+                    elements={graphElements560}
+                    setElements={() => {}}
+                    history={[]}
+                    setHistory={() => {}}
+                    isReadOnly={true}
+                  />
+                </div>
+                <p className="mt-4 text-sm italic font-bold">Gráfico 1 - Curva característica do resistor de 560 Ω.</p>
               </div>
             </div>
-            <div className="h-8" />
           </div>
 
-          <div data-pdf-section data-pdf-section-id="8" className="mb-12 pb-16">
-            <div className="flex flex-col items-center gap-10">
-              <div className="border border-black p-4 bg-white scale-90 origin-top">
-                <h4 className="text-center font-bold mb-2">Gráfico I vs V - Resistor 10 kΩ</h4>
+          <div data-pdf-section data-pdf-section-id="8" className="mb-16 px-10">
+            <div className="flex flex-col items-center">
+              <div className="border-2 border-slate-100 p-6 bg-white shadow-sm">
                 <InteractiveLabGraph 
-                  title="Resistor 10 kΩ" 
+                  title="Gráfico 2: I vs V (10 kΩ)" 
                   data={data10k} 
                   color="#10b981" 
                   maxI={0.002}
@@ -1459,75 +1671,76 @@ export default function App() {
                   isReadOnly={true}
                 />
               </div>
+              <p className="mt-4 text-sm italic font-bold">Gráfico 2 - Curva característica do resistor de 10 kΩ.</p>
             </div>
-            <div className="h-8" />
           </div>
 
-          {/* 7. RESULTADOS E ANÁLISE */}
-          <div data-pdf-section data-pdf-section-id="9" className="mb-12 pb-16">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6">7. Resultados e Análise</h2>
+          {/* 8. RESULTADOS E CÁLCULOS */}
+          <div data-pdf-section data-pdf-section-id="9" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">7. Resultados e Cálculos</h2>
             
-            <h3 className="font-bold mb-4">7.1. Resultados dos Cálculos</h3>
-            <table className="w-full border-collapse border border-black text-sm mb-12">
+            <p className="mb-6 text-justify">Abaixo estão consolidados os valores extraídos dos gráficos e as comparações com os valores de referência:</p>
+            
+            <table className="w-full border-collapse border border-black mb-12">
               <thead>
                 <tr>
-                  <th className="border border-black p-2">Resistor</th>
-                  <th className="border border-black p-2">Inclinação (A/V)</th>
-                  <th className="border border-black p-2">R Calculado (Ω)</th>
-                  <th className="border border-black p-2">R Medido (Ω)</th>
-                  <th className="border border-black p-2">Erro (%)</th>
-                  <th className="border border-black p-2">Potência Dissipada (W)</th>
+                  <th>Resistor</th>
+                  <th>Inclinação (A/V)</th>
+                  <th>R Calc (Ω)</th>
+                  <th>R Med (Ω)</th>
+                  <th>Erro (%)</th>
+                  <th>Potência (W)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-black p-2 font-bold">560 Ω</td>
-                  <td className="border border-black p-2">{calculationResults.r560.slope}</td>
-                  <td className="border border-black p-2">{calculationResults.r560.calculatedR}</td>
-                  <td className="border border-black p-2">{calculationResults.r560.measuredR}</td>
-                  <td className="border border-black p-2">{calculationResults.r560.error}</td>
-                  <td className="border border-black p-2">{calculationResults.r560.power}</td>
+                  <td className="font-bold">560 Ω</td>
+                  <td>{calculationResults.r560.slope || "---"}</td>
+                  <td>{calculationResults.r560.calculatedR || "---"}</td>
+                  <td>{calculationResults.r560.measuredR || "---"}</td>
+                  <td>{calculationResults.r560.error || "---"}</td>
+                  <td>{calculationResults.r560.power || "---"}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black p-2 font-bold">10 kΩ</td>
-                  <td className="border border-black p-2">{calculationResults.r10k.slope}</td>
-                  <td className="border border-black p-2">{calculationResults.r10k.calculatedR}</td>
-                  <td className="border border-black p-2">{calculationResults.r10k.measuredR}</td>
-                  <td className="border border-black p-2">{calculationResults.r10k.error}</td>
-                  <td className="border border-black p-2">{calculationResults.r10k.power}</td>
+                  <td className="font-bold">10 kΩ</td>
+                  <td>{calculationResults.r10k.slope || "---"}</td>
+                  <td>{calculationResults.r10k.calculatedR || "---"}</td>
+                  <td>{calculationResults.r10k.measuredR || "---"}</td>
+                  <td>{calculationResults.r10k.error || "---"}</td>
+                  <td>{calculationResults.r10k.power || "---"}</td>
                 </tr>
               </tbody>
             </table>
-            <div className="h-8" />
           </div>
 
-          <div className="mb-12">
-            <h3 className="font-bold mb-4">7.2. Respostas das Perguntas</h3>
-            <div className="space-y-8">
+          {/* 9. DISCUSSÃO E CONCLUSÃO */}
+          <div data-pdf-section data-pdf-section-id="10" className="mb-16 px-10">
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">8. Discussão das Perguntas</h2>
+            <div className="space-y-12">
               {[
                 {
-                  q: "Pergunta 1",
+                  q: "Discussão 1",
                   text: "Com base nos gráficos obtidos, a relação entre a tensão (V) e a corrente (I) é linear para ambos os resistores? O que isso indica sobre a natureza desses componentes em relação à Lei de Ohm?"
                 },
                 {
-                  q: "Pergunta 2",
+                  q: "Discussão 2",
                   text: "Compare os valores de resistência medidos com o multímetro com os valores nominais (560 Ω e 10 kΩ) e com os valores calculados a partir da inclinação da reta. Quais são as possíveis fontes de erro experimental que podem ter influenciado essas diferenças?"
                 }
               ].map((item, idx) => (
-                <div key={idx} data-pdf-section data-pdf-section-id={10 + idx} className="border-l-4 border-slate-200 pl-4 mb-6 pb-16">
-                  <p className="font-bold text-sm mb-2">{item.q}: {item.text}</p>
-                  <div className="bg-slate-50 p-4 rounded min-h-[60px] whitespace-pre-wrap text-sm">
-                    {answers[idx] || <span className="text-slate-400 italic">Sem resposta.</span>}
+                <div key={idx} className="space-y-4">
+                  <p className="font-bold text-slate-800">8.{idx + 1}. {item.text}</p>
+                  <div className="p-6 bg-slate-50 border-l-4 border-slate-300 text-justify leading-relaxed text-slate-800 min-h-[100px]">
+                    {answers[idx] || "Nenhuma resposta fornecida."}
                   </div>
-                  <div className="h-8" />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 8. ENCERRAMENTO */}
-          <div data-pdf-section className="mt-20 pt-10 border-t border-black text-center">
-            <p className="italic text-sm">Fim do Relatório Experimental</p>
+          {/* 10. ENCERRAMENTO */}
+          <div data-pdf-section data-pdf-section-id="11" className="mt-24 pt-12 border-t-2 border-black text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.5em]">Fim do Relatório Experimental</p>
+            <p className="text-xs text-slate-400 mt-2">Documento gerado eletronicamente via LabReport Pro</p>
           </div>
         </div>
       </div>

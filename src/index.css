@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Libre Baskerville", "Times New Roman", serif;
+
   --color-slate-50: #f8fafc;
   --color-slate-100: #f1f5f9;
   --color-slate-200: #e2e8f0;
@@ -89,5 +93,52 @@
   .page-break {
     page-break-after: always;
     break-after: page;
+  }
+}
+
+@layer base {
+  @media print {
+    @page {
+      size: A4;
+      margin: 15mm;
+    }
+    
+    body {
+      background: white !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Hide UI elements during print */
+    .no-print {
+      display: none !important;
+    }
+
+    #printable-report {
+      display: block !important;
+      position: relative !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      visibility: visible !important;
+    }
+
+    .page-break {
+      page-break-before: always;
+      height: 0;
+      margin: 0;
+      border: none;
+    }
+
+    /* Ensure text is black and crisp */
+    p, h1, h2, h3, li, td, th, span, div {
+      color: black !important;
+      text-rendering: optimizeLegibility !important;
+    }
+    
+    /* Force background colors for specific elements if needed */
+    .bg-slate-50 { background-color: #f8fafc !important; }
+    .bg-slate-900 { background-color: #0f172a !important; }
+    .text-white { color: white !important; }
   }
 }
