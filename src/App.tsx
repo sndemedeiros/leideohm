@@ -32,6 +32,8 @@ import {
 } from "lucide-react";
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 // --- Types ---
 
@@ -554,10 +556,11 @@ export default function App() {
     }
 
     setIsGenerating(true);
+    let tempContainer: HTMLDivElement | null = null;
 
     try {
-      // Create a temporary container for rendering
-      const tempContainer = document.createElement('div');
+      // Create a temporary container for rendering to avoid flickering the main UI
+      tempContainer = document.createElement('div');
       tempContainer.style.position = 'fixed';
       tempContainer.style.left = '-10000px';
       tempContainer.style.top = '0';
@@ -590,48 +593,33 @@ export default function App() {
         }
       });
 
-      // Capture the entire report as one canvas
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 1200
-      });
+      // Wait a bit for images/fonts to settle
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const contentWidth = pdfWidth - (2 * margin);
-      
-      const imgProps = pdf.getImageProperties(imgData);
-      const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
-      
-      let heightLeft = imgHeight;
-      let position = margin;
+      const opt = {
+        margin: 10,
+        filename: `Relatorio_${experimentInfo.experiment.replace(/\s+/g, '_')}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 3, 
+          useCORS: true, 
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+        pagebreak: { mode: ['css', 'legacy'] as any }
+      };
 
-      // Add the first page
-      pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeight);
-      heightLeft -= (pdfHeight - 2 * margin);
-
-      // Add subsequent pages if needed
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight + margin;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeight);
-        heightLeft -= (pdfHeight - 2 * margin);
-      }
-
-      pdf.save(`Relatorio_${experimentInfo.experiment.replace(/\s+/g, '_')}.pdf`);
+      // Generate PDF using html2pdf.js
+      await html2pdf().set(opt).from(clone).save();
       
-      document.body.removeChild(tempContainer);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       alert("Houve um erro ao gerar o PDF. Por favor, tente novamente.");
     } finally {
+      if (tempContainer && tempContainer.parentNode) {
+        document.body.removeChild(tempContainer);
+      }
       setIsGenerating(false);
     }
   };
