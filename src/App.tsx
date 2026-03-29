@@ -590,38 +590,39 @@ export default function App() {
         }
       });
 
+      // Capture the entire report as one canvas
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 1200
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
       const pdf = new jsPDF('p', 'mm', 'a4');
+      
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15;
+      const margin = 10;
       const contentWidth = pdfWidth - (2 * margin);
-
-      const pages = clone.querySelectorAll('[data-pdf-page]');
       
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i] as HTMLElement;
-        
-        const canvas = await html2canvas(page, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          windowWidth: 1200
-        });
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+      
+      let heightLeft = imgHeight;
+      let position = margin;
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.9);
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+      // Add the first page
+      pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeight);
+      heightLeft -= (pdfHeight - 2 * margin);
 
-        if (i > 0) pdf.addPage();
-        
-        // Center vertically if it's the cover page
-        let yPos = margin;
-        if (i === 0 && imgHeight < pdfHeight - 2 * margin) {
-          yPos = (pdfHeight - imgHeight) / 2;
-        }
-
-        pdf.addImage(imgData, 'JPEG', margin, yPos, contentWidth, imgHeight);
+      // Add subsequent pages if needed
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight + margin;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeight);
+        heightLeft -= (pdfHeight - 2 * margin);
       }
 
       pdf.save(`Relatorio_${experimentInfo.experiment.replace(/\s+/g, '_')}.pdf`);
@@ -1260,7 +1261,7 @@ export default function App() {
       <div id="printable-report" className="hidden print:block bg-white text-black font-serif w-full max-w-[210mm] mx-auto">
         <div className="p-12 space-y-12">
           {/* 1. CAPA */}
-          <div data-pdf-page className="text-center min-h-[260mm] flex flex-col justify-between py-12 px-10 border-[10px] border-double border-slate-200">
+          <div className="text-center flex flex-col justify-between py-12 px-10 border-[10px] border-double border-slate-200">
             <div className="space-y-2">
               <h1 className="text-2xl font-bold uppercase tracking-widest">{experimentInfo.university}</h1>
               <h2 className="text-xl font-medium">{experimentInfo.center}</h2>
@@ -1308,8 +1309,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* CONTEÚDO - PAG 2 */}
-          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+          {/* CONTEÚDO */}
+          <div className="space-y-12 text-justify leading-relaxed">
             <section>
               <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">Resumo</h2>
               <p className="italic text-slate-700">
@@ -1333,8 +1334,8 @@ export default function App() {
             </section>
           </div>
 
-          {/* DADOS - PAG 3 */}
-          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+          {/* DADOS */}
+          <div className="space-y-12 text-justify leading-relaxed">
             <section>
               <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">3. Dados Coletados</h2>
               <div className="grid grid-cols-2 gap-8">
@@ -1380,8 +1381,8 @@ export default function App() {
             </section>
           </div>
 
-          {/* GRÁFICOS - PAG 4 */}
-          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+          {/* GRÁFICOS */}
+          <div className="space-y-12 text-justify leading-relaxed">
             <section>
               <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">4. Gráficos</h2>
               <div className="space-y-12">
@@ -1421,8 +1422,8 @@ export default function App() {
             </section>
           </div>
 
-          {/* RESULTADOS - PAG 5 */}
-          <div data-pdf-page className="space-y-12 text-justify leading-relaxed min-h-[260mm]">
+          {/* RESULTADOS */}
+          <div className="space-y-12 text-justify leading-relaxed">
             <section>
               <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">5. Resultados e Discussão</h2>
               <table className="w-full border-collapse border border-black text-center mb-12">
