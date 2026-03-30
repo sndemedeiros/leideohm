@@ -59,15 +59,33 @@ const Warning = ({ children }: { children: React.ReactNode }) => (
 
 const Figure1 = () => (
   <div className="my-6 flex flex-col items-center">
-    <div className="relative w-64 h-48 border-l-2 border-b-2 border-slate-400">
+    <div className="relative w-64 h-48 border-l-2 border-b-2 border-slate-600">
       {/* Axes labels */}
-      <span className="absolute -top-6 left-0 text-xs font-bold italic">i (mA)</span>
+      <span className="absolute -top-6 left-0 text-xs font-bold italic">I (mA)</span>
       <span className="absolute -right-10 bottom-0 text-xs font-bold italic">V (V)</span>
+      
+      {/* Ticks (simplified) */}
+      <div className="absolute left-0 bottom-0 w-full h-1 flex justify-between px-0">
+        {[0,1,2,3,4].map(i => (
+          <div key={i} className="relative">
+            <div className="w-[2px] h-2 bg-slate-600 -mt-1"></div>
+            <span className="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] font-bold">{i}</span>
+          </div>
+        ))}
+      </div>
+      <div className="absolute left-0 bottom-0 h-full w-1 flex flex-col-reverse justify-between py-0">
+        {[0,1,2,3,4].map(i => (
+          <div key={i} className="relative">
+            <div className="h-[2px] w-2 bg-slate-600 -ml-1"></div>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold">{i}</span>
+          </div>
+        ))}
+      </div>
       
       {/* Grid lines (simplified) */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-full h-[1px] bg-slate-200"></div>
-        <div className="h-full w-[1px] bg-slate-200 absolute"></div>
+        <div className="w-full h-[1px] bg-slate-300"></div>
+        <div className="h-full w-[1px] bg-slate-300 absolute"></div>
       </div>
 
       {/* Linear plot */}
@@ -152,19 +170,19 @@ const InteractiveLabGraph = ({
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
     // --- Graph Paper (Papel Milimetrado) ---
-    const drawGrid = (step: number, color: string, width: number) => {
+    const drawGrid = (stepX: number, stepY: number, color: string, width: number) => {
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
       
-      // Vertical lines
-      for (let x = PADDING; x <= WIDTH - PADDING; x += step) {
+      // Vertical lines (starting from PADDING)
+      for (let x = PADDING; x <= WIDTH - PADDING + 0.1; x += stepX) {
         ctx.beginPath();
         ctx.moveTo(x, PADDING);
         ctx.lineTo(x, HEIGHT - PADDING);
         ctx.stroke();
       }
-      // Horizontal lines
-      for (let y = PADDING; y <= HEIGHT - PADDING; y += step) {
+      // Horizontal lines (starting from HEIGHT - PADDING, going up)
+      for (let y = HEIGHT - PADDING; y >= PADDING - 0.1; y -= stepY) {
         ctx.beginPath();
         ctx.moveTo(PADDING, y);
         ctx.lineTo(WIDTH - PADDING, y);
@@ -174,29 +192,47 @@ const InteractiveLabGraph = ({
 
     // Minor grid (1mm equivalent)
     const gridStepX = (WIDTH - 2 * PADDING) / (MAX_V * 10);
-    const gridStepY = (HEIGHT - 2 * PADDING) / 50; // 5 main intervals * 10
+    const gridStepY = (HEIGHT - 2 * PADDING) / (5 * 10); // 5 major divisions for I
     
-    drawGrid(gridStepX, '#f1f5f9', 0.5);
-    drawGrid(gridStepX * 5, '#e2e8f0', 0.8);
-    drawGrid(gridStepX * 10, '#cbd5e1', 1);
+    drawGrid(gridStepX, gridStepY, '#cbd5e1', 0.5);
+    drawGrid(gridStepX * 5, gridStepY * 5, '#94a3b8', 0.8);
+    drawGrid(gridStepX * 10, gridStepY * 10, '#64748b', 1);
 
-    // Labels V
+    // Labels V and Ticks
     for (let v = 0; v <= MAX_V; v++) {
       const x = PADDING + (v / MAX_V) * (WIDTH - 2 * PADDING);
+      
+      // Tick
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, HEIGHT - PADDING);
+      ctx.lineTo(x, HEIGHT - PADDING + 6);
+      ctx.stroke();
+
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 14px Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(v.toString(), x, HEIGHT - PADDING + 20);
+      ctx.fillText(v.toString(), x, HEIGHT - PADDING + 22);
     }
 
-    // Labels I
+    // Labels I and Ticks
     for (let i = 0; i <= 5; i++) {
       const val = (i / 5) * MAX_I * 1000;
       const y = HEIGHT - PADDING - (i / 5) * (HEIGHT - 2 * PADDING);
+      
+      // Tick
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(PADDING, y);
+      ctx.lineTo(PADDING - 6, y);
+      ctx.stroke();
+
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 14px Arial, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(val.toFixed(1), PADDING - 8, y + 4);
+      ctx.fillText(val.toFixed(1), PADDING - 12, y + 5);
     }
 
     // Draw Axes
