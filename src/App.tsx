@@ -61,7 +61,7 @@ const Figure1 = () => (
   <div className="my-6 flex flex-col items-center">
     <div className="relative w-64 h-48 border-l-2 border-b-2 border-slate-400">
       {/* Axes labels */}
-      <span className="absolute -top-6 left-0 text-xs font-bold italic">i (A)</span>
+      <span className="absolute -top-6 left-0 text-xs font-bold italic">i (mA)</span>
       <span className="absolute -right-10 bottom-0 text-xs font-bold italic">V (V)</span>
       
       {/* Grid lines (simplified) */}
@@ -191,12 +191,12 @@ const InteractiveLabGraph = ({
 
     // Labels I
     for (let i = 0; i <= 5; i++) {
-      const val = (i / 5) * MAX_I;
+      const val = (i / 5) * MAX_I * 1000;
       const y = HEIGHT - PADDING - (i / 5) * (HEIGHT - 2 * PADDING);
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 14px Arial, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(val.toFixed(4), PADDING - 8, y + 4);
+      ctx.fillText(val.toFixed(1), PADDING - 8, y + 4);
     }
 
     // Draw Axes
@@ -216,7 +216,7 @@ const InteractiveLabGraph = ({
     ctx.save();
     ctx.translate(10, HEIGHT / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('I (A)', 0, 0);
+    ctx.fillText('I (mA)', 0, 0);
     ctx.restore();
 
     // Draw Elements
@@ -417,12 +417,12 @@ const InteractiveLabGraph = ({
 const DataTable = ({ title, data, onChange }: { title: string, data: DataRow[], onChange: (idx: number, field: keyof DataRow, val: string) => void }) => {
   const handleCopy = () => {
     const text = data.map((row, i) => `${i + 1}\t${row.v}\t${row.i}`).join("\n");
-    navigator.clipboard.writeText(`Medida\tV (V)\tI (A)\n${text}`);
+    navigator.clipboard.writeText(`Medida\tV (V)\tI (mA)\n${text}`);
   };
 
   const handleExport = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
-      + "Medida,V (V),I (A)\n"
+      + "Medida,V (V),I (mA)\n"
       + data.map((row, i) => `${i + 1},${row.v},${row.i}`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -460,7 +460,7 @@ const DataTable = ({ title, data, onChange }: { title: string, data: DataRow[], 
             <tr>
               <th className="px-4 py-2 border-b border-slate-100">Medida</th>
               <th className="px-4 py-2 border-b border-slate-100">V (V)</th>
-              <th className="px-4 py-2 border-b border-slate-100">I (A)</th>
+              <th className="px-4 py-2 border-b border-slate-100">I (mA)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -920,6 +920,18 @@ export default function App() {
                 data={data560} 
                 onChange={updateData560} 
               />
+              <div className="mt-8">
+                <InteractiveLabGraph 
+                  title="Gráfico I vs V - Resistor 560 Ω" 
+                  data={data560} 
+                  color="#2563eb" 
+                  maxI={0.025} 
+                  elements={graphElements560}
+                  setElements={setGraphElements560}
+                  history={graphHistory560}
+                  setHistory={setGraphHistory560}
+                />
+              </div>
             </div>
 
             <div>
@@ -938,42 +950,27 @@ export default function App() {
                 data={data10k} 
                 onChange={updateData10k} 
               />
+              <div className="mt-8">
+                <InteractiveLabGraph 
+                  title="Gráfico I vs V - Resistor 10 kΩ" 
+                  data={data10k} 
+                  color="#10b981" 
+                  maxI={0.002} 
+                  elements={graphElements10k}
+                  setElements={setGraphElements10k}
+                  history={graphHistory10k}
+                  setHistory={setGraphHistory10k}
+                />
+              </div>
             </div>
           </div>
         </section>
 
-        {/* 6. GRÁFICO E ANÁLISE */}
+        {/* 6. ANÁLISE E CÁLCULOS */}
         <section id="analise" className="scroll-mt-20">
-          <h2 className="text-xl font-bold text-slate-800 mb-6 uppercase tracking-wider border-b-2 border-blue-100 pb-2">Gráfico e Análise</h2>
+          <h2 className="text-xl font-bold text-slate-800 mb-6 uppercase tracking-wider border-b-2 border-blue-100 pb-2">Análise e Cálculos</h2>
           
           <div className="space-y-12">
-            <div className="space-y-8">
-              <h4 className="flex items-center gap-2 text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">
-                <LineChartIcon size={16} /> Plotagem Manual de Pontos
-              </h4>
-              
-              <InteractiveLabGraph 
-                title="Gráfico I vs V - Resistor 560 Ω" 
-                data={data560} 
-                color="#2563eb" 
-                maxI={0.025} 
-                elements={graphElements560}
-                setElements={setGraphElements560}
-                history={graphHistory560}
-                setHistory={setGraphHistory560}
-              />
-              <InteractiveLabGraph 
-                title="Gráfico I vs V - Resistor 10 kΩ" 
-                data={data10k} 
-                color="#10b981" 
-                maxI={0.002} 
-                elements={graphElements10k}
-                setElements={setGraphElements10k}
-                history={graphHistory10k}
-                setHistory={setGraphHistory10k}
-              />
-            </div>
-
             <div className="space-y-6 text-slate-700">
               <p className="text-lg font-medium">Com os dados coletados para cada resistor, preencha a tabela abaixo:</p>
 
@@ -1020,11 +1017,11 @@ export default function App() {
                     <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
                       <tr>
                         <th className="px-4 py-3 border border-slate-200">Resistor</th>
-                        <th className="px-4 py-3 border border-slate-200">Inclinação (A/V)</th>
+                        <th className="px-4 py-3 border border-slate-200">Inclinação (mA/V)</th>
                         <th className="px-4 py-3 border border-slate-200">R Calculado (Ω)</th>
                         <th className="px-4 py-3 border border-slate-200">R Medido (Ω)</th>
                         <th className="px-4 py-3 border border-slate-200">Erro (%)</th>
-                        <th className="px-4 py-3 border border-slate-200">Potência Dissipada (W)</th>
+                        <th className="px-4 py-3 border border-slate-200">Potência Dissipada (mW)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1364,100 +1361,100 @@ export default function App() {
             </div>
           </div>
 
-          {/* 6. DADOS COLETADOS */}
+          {/* 6. DADOS COLETADOS E ANÁLISE GRÁFICA */}
           <div data-pdf-section data-pdf-section-id="6" className="mb-16 px-10">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">5. Dados Coletados</h2>
-            <div className="grid grid-cols-2 gap-12">
-              <div>
-                <h3 className="font-bold mb-4 text-center">Tabela 1: Resistor 560 Ω</h3>
-                <table className="w-full border-collapse border border-black text-sm">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="border border-black p-1 w-12">Ponto</th>
-                      <th className="border border-black p-1">Tensão (V)</th>
-                      <th className="border border-black p-1">Corrente (A)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data560.map((d, i) => (
-                      <tr key={i}>
-                        <td className="border border-black p-1">{i + 1}</td>
-                        <td className="border border-black p-1">{d.v || "---"}</td>
-                        <td className="border border-black p-1">{d.i || "---"}</td>
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-6 uppercase tracking-widest">5. Dados Coletados e Análise Gráfica</h2>
+            
+            <div className="space-y-16">
+              {/* Resistor 1 */}
+              <div className="space-y-8">
+                <div>
+                  <h3 className="font-bold mb-4 text-center">Tabela 1: Resistor 560 Ω</h3>
+                  <table className="w-full border-collapse border border-black text-sm">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        <th className="border border-black p-1 w-12">Ponto</th>
+                        <th className="border border-black p-1">Tensão (V)</th>
+                        <th className="border border-black p-1">Corrente (mA)</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div>
-                <h3 className="font-bold mb-4 text-center">Tabela 2: Resistor 10 kΩ</h3>
-                <table className="w-full border-collapse border border-black text-sm">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="border border-black p-1 w-12">Ponto</th>
-                      <th className="border border-black p-1">Tensão (V)</th>
-                      <th className="border border-black p-1">Corrente (A)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data10k.map((d, i) => (
-                      <tr key={i}>
-                        <td className="border border-black p-1">{i + 1}</td>
-                        <td className="border border-black p-1">{d.v || "---"}</td>
-                        <td className="border border-black p-1">{d.i || "---"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* 7. GRÁFICOS */}
-          <div data-pdf-section data-pdf-section-id="7" className="mb-16 px-10">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-10 uppercase tracking-widest">6. Gráficos e Análise Visual</h2>
-            <div className="space-y-20">
-              <div className="flex flex-col items-center">
-                <div className="border-2 border-slate-100 p-6 bg-white shadow-sm">
-                  <InteractiveLabGraph 
-                    title="Gráfico 1: I vs V (560 Ω)" 
-                    data={data560} 
-                    color="#2563eb" 
-                    maxI={0.025}
-                    elements={graphElements560}
-                    setElements={() => {}}
-                    history={[]}
-                    setHistory={() => {}}
-                    isReadOnly={true}
-                  />
+                    </thead>
+                    <tbody>
+                      {data560.map((d, i) => (
+                        <tr key={i}>
+                          <td className="border border-black p-1">{i + 1}</td>
+                          <td className="border border-black p-1">{d.v || "---"}</td>
+                          <td className="border border-black p-1">{d.i || "---"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <p className="mt-4 text-sm italic font-bold">Gráfico 1 - Curva característica do resistor de 560 Ω.</p>
+
+                <div className="flex flex-col items-center">
+                  <div className="border-2 border-slate-100 p-6 bg-white shadow-sm">
+                    <InteractiveLabGraph 
+                      title="Gráfico 1: I vs V (560 Ω)" 
+                      data={data560} 
+                      color="#2563eb" 
+                      maxI={0.025}
+                      elements={graphElements560}
+                      setElements={() => {}}
+                      history={[]}
+                      setHistory={() => {}}
+                      isReadOnly={true}
+                    />
+                  </div>
+                  <p className="mt-4 text-sm italic font-bold">Gráfico 1 - Curva característica do resistor de 560 Ω.</p>
+                </div>
+              </div>
+
+              {/* Resistor 2 */}
+              <div className="space-y-8">
+                <div>
+                  <h3 className="font-bold mb-4 text-center">Tabela 2: Resistor 10 kΩ</h3>
+                  <table className="w-full border-collapse border border-black text-sm">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        <th className="border border-black p-1 w-12">Ponto</th>
+                        <th className="border border-black p-1">Tensão (V)</th>
+                        <th className="border border-black p-1">Corrente (mA)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data10k.map((d, i) => (
+                        <tr key={i}>
+                          <td className="border border-black p-1">{i + 1}</td>
+                          <td className="border border-black p-1">{d.v || "---"}</td>
+                          <td className="border border-black p-1">{d.i || "---"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <div className="border-2 border-slate-100 p-6 bg-white shadow-sm">
+                    <InteractiveLabGraph 
+                      title="Gráfico 2: I vs V (10 kΩ)" 
+                      data={data10k} 
+                      color="#10b981" 
+                      maxI={0.002}
+                      elements={graphElements10k}
+                      setElements={() => {}}
+                      history={[]}
+                      setHistory={() => {}}
+                      isReadOnly={true}
+                    />
+                  </div>
+                  <p className="mt-4 text-sm italic font-bold">Gráfico 2 - Curva característica do resistor de 10 kΩ.</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div data-pdf-section data-pdf-section-id="8" className="mb-16 px-10">
-            <div className="flex flex-col items-center">
-              <div className="border-2 border-slate-100 p-6 bg-white shadow-sm">
-                <InteractiveLabGraph 
-                  title="Gráfico 2: I vs V (10 kΩ)" 
-                  data={data10k} 
-                  color="#10b981" 
-                  maxI={0.002}
-                  elements={graphElements10k}
-                  setElements={() => {}}
-                  history={[]}
-                  setHistory={() => {}}
-                  isReadOnly={true}
-                />
-              </div>
-              <p className="mt-4 text-sm italic font-bold">Gráfico 2 - Curva característica do resistor de 10 kΩ.</p>
-            </div>
-          </div>
-
-          {/* 8. RESULTADOS E CÁLCULOS */}
+          {/* 7. RESULTADOS E CÁLCULOS */}
           <div data-pdf-section data-pdf-section-id="9" className="mb-16 px-10">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">7. Resultados e Cálculos</h2>
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">6. Resultados e Cálculos</h2>
             
             <p className="mb-6 text-justify">Abaixo estão consolidados os valores extraídos dos gráficos e as comparações com os valores de referência:</p>
             
@@ -1465,11 +1462,11 @@ export default function App() {
               <thead>
                 <tr className="bg-slate-50">
                   <th className="border border-black p-2">Resistor</th>
-                  <th className="border border-black p-2">Inclinação (A/V)</th>
+                  <th className="border border-black p-2">Inclinação (mA/V)</th>
                   <th className="border border-black p-2">R Calc (Ω)</th>
                   <th className="border border-black p-2">R Med (Ω)</th>
                   <th className="border border-black p-2">Erro (%)</th>
-                  <th className="border border-black p-2">Potência (W)</th>
+                  <th className="border border-black p-2">Potência (mW)</th>
                 </tr>
               </thead>
               <tbody>
@@ -1495,7 +1492,7 @@ export default function App() {
 
           {/* 9. DISCUSSÃO E CONCLUSÃO */}
           <div data-pdf-section data-pdf-section-id="10" className="mb-16 px-10">
-            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">8. Perguntas e Discussão</h2>
+            <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-8 uppercase tracking-widest">7. Perguntas e Discussão</h2>
             <div className="space-y-12">
               {[
                 {
