@@ -61,7 +61,7 @@ const Figure1 = () => (
   <div className="my-6 flex flex-col items-center">
     <div className="relative w-64 h-48 border-l-2 border-b-2 border-slate-600">
       {/* Axes labels */}
-      <span className="absolute -top-6 left-0 text-xs font-bold italic">I (mA)</span>
+      <span className="absolute -top-6 left-0 text-xs font-bold italic">I(mA)</span>
       <span className="absolute -right-10 bottom-0 text-xs font-bold italic">V (V)</span>
       
       {/* Ticks (simplified) */}
@@ -252,7 +252,7 @@ const InteractiveLabGraph = ({
     ctx.save();
     ctx.translate(10, HEIGHT / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('I (mA)', 0, 0);
+    ctx.fillText('I(mA)', 0, 0);
     ctx.restore();
 
     // Draw Elements
@@ -453,12 +453,12 @@ const InteractiveLabGraph = ({
 const DataTable = ({ title, data, onChange }: { title: string, data: DataRow[], onChange: (idx: number, field: keyof DataRow, val: string) => void }) => {
   const handleCopy = () => {
     const text = data.map((row, i) => `${i + 1}\t${row.v}\t${row.i}`).join("\n");
-    navigator.clipboard.writeText(`Medida\tV (V)\tI (mA)\n${text}`);
+    navigator.clipboard.writeText(`Medida\tV (V)\tI(mA)\n${text}`);
   };
 
   const handleExport = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
-      + "Medida,V (V),I (mA)\n"
+      + "Medida,V (V),I(mA)\n"
       + data.map((row, i) => `${i + 1},${row.v},${row.i}`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -496,7 +496,7 @@ const DataTable = ({ title, data, onChange }: { title: string, data: DataRow[], 
             <tr>
               <th className="px-4 py-2 border-b border-slate-100">Medida</th>
               <th className="px-4 py-2 border-b border-slate-100">V (V)</th>
-              <th className="px-4 py-2 border-b border-slate-100">I (mA)</th>
+              <th className="px-4 py-2 border-b border-slate-100">I(<span className="lowercase">m</span>A)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1053,11 +1053,11 @@ export default function App() {
                     <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
                       <tr>
                         <th className="px-4 py-3 border border-slate-200">Resistor</th>
-                        <th className="px-4 py-3 border border-slate-200">Inclinação (mA/V)</th>
+                        <th className="px-4 py-3 border border-slate-200">Inclinação (<span className="lowercase">m</span>A/V)</th>
                         <th className="px-4 py-3 border border-slate-200">R Calculado (Ω)</th>
                         <th className="px-4 py-3 border border-slate-200">R Medido (Ω)</th>
                         <th className="px-4 py-3 border border-slate-200">Erro (%)</th>
-                        <th className="px-4 py-3 border border-slate-200">Potência Dissipada (mW)</th>
+                        <th className="px-4 py-3 border border-slate-200">Potência Dissipada (<span className="lowercase">m</span>W)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1411,7 +1411,7 @@ export default function App() {
                       <tr className="bg-slate-50">
                         <th className="border border-black p-1 w-12">Ponto</th>
                         <th className="border border-black p-1">Tensão (V)</th>
-                        <th className="border border-black p-1">Corrente (mA)</th>
+                        <th className="border border-black p-1">I(mA)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1453,7 +1453,7 @@ export default function App() {
                       <tr className="bg-slate-50">
                         <th className="border border-black p-1 w-12">Ponto</th>
                         <th className="border border-black p-1">Tensão (V)</th>
-                        <th className="border border-black p-1">Corrente (mA)</th>
+                        <th className="border border-black p-1">I(mA)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1498,11 +1498,11 @@ export default function App() {
               <thead>
                 <tr className="bg-slate-50">
                   <th className="border border-black p-2">Resistor</th>
-                  <th className="border border-black p-2">Inclinação (mA/V)</th>
+                  <th className="border border-black p-2">Inclinação (<span className="lowercase">m</span>A/V)</th>
                   <th className="border border-black p-2">R Calc (Ω)</th>
                   <th className="border border-black p-2">R Med (Ω)</th>
                   <th className="border border-black p-2">Erro (%)</th>
-                  <th className="border border-black p-2">Potência (mW)</th>
+                  <th className="border border-black p-2">Potência (<span className="lowercase">m</span>W)</th>
                 </tr>
               </thead>
               <tbody>
